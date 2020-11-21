@@ -6,33 +6,38 @@ close all
 
 trials = 1000;
 nummoves = zeros(trials,1);
+plotLogic = 0;
+
+addpath('Algorithms')
+addpath('GetInfo')
 addpath('Movement')
+addpath('Plot')
+
 %% solved cube start
 
-for trialnum = 893
+for trialnum =  14 %893
 tic
     
 cube = newCube();
 cubeSolved = cube;
-%plotcube(cube);
+
+if plotLogic == 1
+    plotcube(cube);
+end
 
 [cornersSolve, sidesSolve] = getLocations(cube);
-% %%
-% cube = D(cube);
-% %plotcube(cube)
-view(-70,20)
 
-% cube = R(cube)
-% %plotcube(cube);
-% [corners, sides] = getLocations(cube)
+view(-70,20)
 
 
 %% mix up
 cube = cubeSolved;
 pausetime = 0.01;
 [cube,algo] = shuffle(cube,trialnum);
-% plotcube(cube)s;
 
+if plotLogic == 1
+    plotcube(cube);
+end
 
 
 %% stage 1.1 the cross
@@ -51,18 +56,17 @@ while exitCross == 0 && steps < 10
         else
             total_algo = [total_algo, algo_out];
         end
-%         plotcube(cube);
     end
     
     if checkCross == 4
         exitCross = 1;
     end
     steps = steps+1;
-%     plotcube(cube);
+    if plotLogic == 1
+	     plotcube(cube);
+    end
 end
 total_algo = join(total_algo);
-% plotcube(cube)
-
 
 %% stage 1.2 the corners
 for yrotate = 1:4
@@ -71,7 +75,10 @@ for yrotate = 1:4
     cubeSolved = Y(cubeSolved);
     [cornersSolve, sidesSolve] = getLocations(cubeSolved);
     
-    %plotcube(cube)
+    if plotLogic == 1
+        plotcube(cube)
+    end
+    
     index_goal = 4;
     color_goal = cornersSolve(index_goal,:);
     goal = {color_goal,index_goal};
@@ -92,7 +99,11 @@ for yrotate = 1:4
         cube = doAlgorithm(cube,algo_tmp);
         total_algo = join([total_algo, algo_tmp]); % record step
     end
-    %plotcube(cube)
+    
+    if plotLogic == 1
+        plotcube(cube)
+    end
+    
     [corners, ~] = getLocations(cube);
     index_root = getRowLoc(color_goal,corners);
     color_root = corners(index_root,:);
@@ -113,9 +124,10 @@ for yrotate = 1:4
             steps = steps + 1;
         end
     end
-    %plotcube(cube)
+    if plotLogic == 1
+        plotcube(cube)
+    end
 
-    %
     algo_rep = "R' D' R D";
     correctCorner = 0;
     steps = 0;
@@ -132,7 +144,9 @@ for yrotate = 1:4
         steps = steps+1;
     end
     
-    plotcube(cube)
+    if plotLogic == 1
+        plotcube(cube)
+    end
 end
 
 %% Stage 1.3: Flip Cube
@@ -140,8 +154,9 @@ cube = doAlgorithm(cube,"Z2");
 total_algo = join([total_algo, "Z2"]); % record step
 cubeSolved = doAlgorithm(cubeSolved,"Z2");
 [cornersSolve, sidesSolve] = getLocations(cubeSolved);
-%plotcube(cube)
-
+if plotLogic == 1
+    plotcube(cube)
+end
 %% Stage 2: middle sides;
 algo_mid_right = "U R U' R' U' F' U F";
 algo_mid_left = "U' L' U L U F U' F'";
@@ -278,7 +293,9 @@ for yrotate = 1:4
         end
     end
 end
-%plotcube(cube);
+if plotLogic == 1
+    plotcube(cube)
+end
 
 %% stage 3.1 corners
 algo_rot_cc = "U R U' L' U R' U' L";
@@ -300,8 +317,10 @@ elseif index_tmp == 2
     cube = U(cube,1);
     total_algo = join([total_algo, "U'"]); % record step
 end
-%plotcube(cube);
-%
+if plotLogic == 1
+    plotcube(cube)
+end
+
 match = checkTopCorner(cube,cornersSolve);
 steps = 0;
 while match ~= 4 && steps < 10
@@ -321,7 +340,6 @@ if steps == 10
     disp('stuck ...?')
 end
 
-%
 for yrotate = 1:4
     cube = U(cube);
     total_algo = join([total_algo, "U"]); % record step
@@ -350,7 +368,9 @@ for yrotate = 1:4
     end
 end
 
-% plotcube(cube)
+if plotLogic == 1
+    plotcube(cube)
+end
 
 %% stage 3.2 getting one side correct
 algo_side_R_d = "L F R' F' L' R U R U' R'";
@@ -403,35 +423,35 @@ elseif index_tmp == 6 && ~isequal(color_goal,color_tmp)
     total_algo = join([total_algo, algo_side_R_u, "Y2", algo_side_L_u, "Y2" ]); % record step
 end
 
-% cubetmp = doAlgorithm(cube,algo_side_L_c);
 cube = Y(cube);
 total_algo = join([total_algo, "Y" ]); % record step
 cubeSolved = Y(cubeSolved);
 [cornersSolve, sidesSolve] = getLocations(cubeSolved);
-% plotcube(cube)
+
+if plotLogic == 1
+    plotcube(cube)
+end
 
 
 %% 3.3 finish the remaining 3 sides
 
 [cube, algo_out] = topsideBFS(cube,sidesSolve);
-%plotcube(cube)
+if plotLogic == 1
+    plotcube(cube)
+end
 total_algo = join([total_algo, algo_out ]); % record step
 
 %% total plot
 toc
-% cube2 = shuffle(newCube,trialnum);
-% cube2 = doAlgorithm(cube2,total_algo,pausetime);
-% % plotcube(cubetmp)
-% 
 
-    
-    if isequal(cubeSolved,cube)
-        nummoves(trialnum) = size(split(total_algo),1);
-        fprintf("Solved #%d in %d moves\n", trialnum, size(split(total_algo),1))
-    else
-        nummoves(trialnum) = -1;
-        fprintf("Did not solve\n");
-    end
+
+if isequal(cubeSolved,cube)
+    nummoves(trialnum) = size(split(total_algo),1);
+    fprintf("Solved #%d in %d moves\n", trialnum, size(split(total_algo),1))
+else
+    nummoves(trialnum) = -1;
+    fprintf("Did not solve\n");
+end
     
 end
 
