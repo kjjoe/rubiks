@@ -1,0 +1,28 @@
+% function doAlgorithm
+%
+% Based on the input algorithm string, it performs the algorithm step by
+% step on the cube. It outputs the cube after the algorithm is complete.
+%
+% input:  
+%    - color: vector [1x2
+
+%
+% output: 
+%    - index: row index of the color in matrix
+
+function index = getRowLoc(c,matrix)
+    found = 0;
+    index = 0;
+    while found == 0 && index < size(matrix,1)
+        index = index + 1;
+        tmp = matrix(index,:);
+        s = 0;
+        for j = 1:length(str_in)
+            s = s + sum(tmp == str_in(j));
+        end
+        if s == length(str_in)
+            found = 1;
+        end
+    end
+
+end
