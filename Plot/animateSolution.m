@@ -86,7 +86,11 @@ for i = 1:length(moves)
     lenmove = length(moves{i});
     movefunc = str2func(moves{i}(1));
     
-    incrange = incstep:incstep:0.5; % property
+    % linear movement
+%     incrange = incstep:incstep:0.5; % property
+    
+    % parabolic movement. looks cleaner
+    incrange = [ (incstep:incstep:0.5).^2, 0.5 - (0.5:-incstep:incstep).^2] ;
     
     prime = 0; 
     double = 0;
@@ -188,6 +192,7 @@ for i = 1:length(moves)
         axis([-2.5,2.5,-2.5,2.5,-2.5,2.5])
         view(-70,20)
         title(moves{i})
+        drawnow()
         
         
         pause(0.00001)

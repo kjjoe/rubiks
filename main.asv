@@ -1,0 +1,256 @@
+%% rubiks cube
+% Kevin Joe
+% 3x3
+clear all
+close all
+
+trials = 1000;
+nummoves = zeros(trials,1);
+plotLogic = 0;
+
+addpath('Algorithms')
+addpath('GetInfo')
+addpath('Movement')
+addpath('Plot')
+addpath('Stages')
+
+%% solved cube start
+
+for trialnum =  4 %893
+    
+cube = newCube();
+cubeSolved = cube;
+
+if plotLogic == 1
+    plotcube(cube);
+end
+
+[cornersSolve, sidesSolve] = getLocations(cube);
+
+% view(-70,20)
+
+
+%% mix up
+cube = cubeSolved;
+pausetime = 0.01;
+[cube,algo] = shuffle(cube,trialnum);
+
+if plotLogic == 1
+    plotcube(cube);
+end
+
+total_algo = [];
+
+%% stage 1.1 the cross
+rot = ['X','Y','Z'];
+
+tic
+[cube,cubeSolved,algo1p1] = stage1p1(cube,cubeSolved,plotLogic);
+total_algo = join([total_algo, algo1p1]);
+toc
+% 
+% for i = 1:3
+%     movefunc = str2func(rot(i));
+%     for j = 1:2
+%         if j == 1
+%             cube_tmp = movefunc(cube); 
+%         else
+%             cube_tmp = movefunc(cube,1);
+%         end
+% 
+%         [~,~,algo_tmp] = stage1p1(cube_tmp,cubeSolved,plotLogic);
+%         length(split(algo_tmp))
+% %         total_algo = join([total_algo, algo1p1]);
+%     end
+% end
+
+
+
+%% stage 1.2 the corners
+tic
+[cube,cubeSolved,algo1p2] = stage1p2(cube,cubeSolved,plotLogic);
+total_algo = join([total_algo, algo1p2]);
+toc
+%% Stage 2: middle sides;
+tic
+[cube,cubeSolved,algo2] = stage2(cube,cubeSolved,plotLogic);
+total_algo = join([total_algo, algo2]);
+toc
+%% stage 3.1 corners
+tic
+[cube,cubeSolved,algo3p1] = stage3p1(cube,cubeSolved,plotLogic);
+total_algo = join([total_algo, algo3p1]);
+toc
+%% stage 3.2 getting one side correct
+tic
+[cube,cubeSolved,algo3p2] = stage3p2(cube,cubeSolved,plotLogic);
+total_algo = join([total_algo, algo3p2]);
+toc
+
+%% Test if solved
+
+
+if isequal(cubeSolved,cube)
+    nummoves(trialnum) = size(split(total_algo),1);
+    fprintf("Trial #%d: Solved in %d moves\n", trialnum, size(split(total_algo),1))
+else
+    nummoves(trialnum) = -1;
+    fprintf("Trial #%d: Did not solve\n",trialnum);
+end
+    
+
+
+%% animation?? 
+
+% animateSolution(total_algo, trialnum)
+
+
+% to do: make it so that each stage has input so that it knows which side
+% and order to solve things in. Also have a way parse an algorithm and not
+% include cube rotations as "moves". In addition, reduce algorithm to
+% remove doubles like Y then Y' immediately. 
+%%
+ tog = char(total_algo);
+    tog(tog == ' ') = [];
+    t = tog;
+    moveset = 'DFRUBLMESXYZ';
+    moveset = 'U';
+    for mindex = 1:12
+        locprime = (t == '''');
+        
+        % locations for specific move
+        move = moveset(mindex);
+        
+        % write in all the doubles
+        locdouble = (t == '2');
+        loc = (t == move);
+        t(circshift(loc,1) & locdouble) = move
+        
+        % remove F F'  and then F' F
+        for i = 1:2
+            if i == 1
+                look = [1,-1];
+            else
+                look = [-1,0,1];
+            end
+            loc = double(t == move);
+            loc(circshift(loc & circshift(locdouble,-1),1)) = 1; % write doubles
+            loc(loc & circshift(locprime,-1)) = -1; % mark backwards movement
+
+            redudant = (conv(loc,look,'same') == -2) ;
+            if i == 2
+                redudant = circshift(redudant,-1);
+            end
+            redudant([find(redudant == 1) + 1 , find(redudant == 1) + 2]) = 1; % remove these points as well
+            t(redudant) = ' ';
+        end
+        % update loc
+        loc = double(t == move);
+        loc(circshift(loc & circshift(locdouble,-1),1)) = 1; % write doubles
+        loc(loc & circshift(locprime,-1)) = -1; % mark backwards movement
+
+        % find streaks
+        nz = find(loc ~= 0);
+        streakvec = zeros(size(loc));
+        i = 1;
+        while i <= length(nz)
+            first = loc(nz(i));
+            cont = 1;
+            j = 1;
+            streak = 1;
+            while cont == 1 &&  (nz(i) + j ) <= length(loc)
+                if first == 1
+                    if first == loc(nz(i) + j)
+                        streak = streak + 1;
+                    else
+                        cont = 0;
+                    end
+                    j = j + 1;
+                else % weird logic if streaks of F'F'F'
+                    try
+                        if isequal([-1,0] , loc(nz(i)+j+1 : nz(i)+j+2 ))
+                            streak = streak + 1;
+                        else
+                            cont = 0;
+                        end
+                    catch
+                        cont = 0;
+                    end
+                    j = j + 2;
+                end
+
+            end
+            if first == 1
+                streakvec( nz(i) ) = streak;
+            else % weird logic if streaks of F'F'F'
+                streakvec( nz(i) ) = -streak;
+            end
+            i = i + streak;
+        end
+
+        % remove streak
+        streaknew = mod(streakvec,4);
+        nz = find(streakvec > 1);
+
+        for i = 1:length(nz)
+            tmp = repmat(' ',1,streakvec(nz(i)));
+            if streaknew(nz(i)) == 1
+                tmp(1) = move;
+            elseif streaknew(nz(i)) == 2
+                tmp(1:2) = [move, '2'];
+            elseif streaknew(nz(i)) == 3
+                tmp(1:2) = [move, ''''];
+            end
+
+            t(nz(i) : nz(i)+streakvec(nz(i))-1) = tmp;
+        end
+        
+        % remove streak negatives
+        % this has not been properly tested. might find edge cases later
+        nz = find(streakvec < -1);
+
+        for i = 1:length(nz)
+            tmp = repmat(' ',1,abs(streakvec(nz(i))));
+            if streaknew(nz(i)) == 1
+                tmp(1) = move;
+            elseif streaknew(nz(i)) == 2
+                tmp(1:2) = [move, '2'];
+            elseif streaknew(nz(i)) == 3
+                tmp(1:2) = [move, ''''];
+            end
+
+            t(nz(i) : nz(i)+streakvec(nz(i))-1) = tmp;
+        end
+    end
+
+    %% convert back
+    t(t==' ') = [];
+    locprimedouble = circshift((t == '''') + (t == '2'),-1);
+    algo_new = [];
+    i = 1;
+    while i < length(t)
+        if locprimedouble(i) == 1
+            tmp = t(i:i+1);
+            i = i + 2;
+        else
+            tmp = t(i);
+            i = i + 1;
+        end
+
+        algo_new = join([algo_new, string(tmp)]);
+    end
+
+
+
+%% test reduceAlgo
+cube = newCube();
+[cube,~] = shuffle(cube,trialnum);
+% algo_new = reduceAlgo(total_algo);
+cube_new = doAlgorithm(cube,algo_new);
+if isequal(cubeSolved,cube_new)
+    nummoves(trialnum,2) = size(split(algo_new),1);
+    fprintf('Trial #%d: Reduced Algorithm Solved in %d moves\n',trialnum,size(split(algo_new),1))
+else
+    fprintf('Trial #%d: fail\n',trialnum)
+end
+end
