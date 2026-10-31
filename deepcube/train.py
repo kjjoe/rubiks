@@ -9,6 +9,11 @@ those targets well (loss < threshold), the frozen copy is refreshed. Each
 refresh lets distance information spread one step further out from solved.
 
     python -m deepcube.train --size small --iters 20000
+    python -m deepcube.train --size small --hours 1.5
+
+The checkpoint is saved every --check-every iterations and when training
+stops (iteration limit, time limit or Ctrl+C), and the progress printout is
+also written to a .log file next to it.
 """
 import argparse
 import copy
@@ -45,7 +50,8 @@ def depth_report(cube, net, n=200):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--size", choices=SIZES, default="small")
-    p.add_argument("--iters", type=int, default=20_000)
+    p.add_argument("--iters", type=int, help="stop after this many iterations (default 20000 if --hours not given)")
+    p.add_argument("--hours", type=float, help="stop after this much wall-clock time")
     p.add_argument("--batch", type=int, default=10_000)
     p.add_argument("--max-depth", type=int, default=30, help="scramble depths are uniform in 1..max-depth")
     p.add_argument("--lr", type=float, default=1e-3)
@@ -56,6 +62,8 @@ def main():
     p.add_argument("--resume", help="checkpoint to continue from")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
+    if args.iters is None and args.hours is None:
+        args.iters = 20_000
 
     torch.manual_seed(args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -73,17 +81,42 @@ def main():
     target_net = copy.deepcopy(net).eval()
     opt = torch.optim.Adam(net.parameters(), lr=args.lr)
     sched = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=args.lr_decay)
+    if args.resume and "optimizer" in ckpt:
+        # pick up exactly where it stopped: same frozen target, learning rate and Adam state
+        target_net.load_state_dict(ckpt["target"])
+        opt.load_state_dict(ckpt["optimizer"])
+        sched.load_state_dict(ckpt["scheduler"])
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
 
     def save(it):
-        torch.save(dict(model=net.state_dict(), config=net.config, iter=it, n_updates=n_updates), out)
+        torch.save(
+            dict(
+                model=net.state_dict(), config=net.config, iter=it, n_updates=n_updates,
+                target=target_net.state_dict(), optimizer=opt.state_dict(), scheduler=sched.state_dict(),
+            ),
+            out,
+        )
 
-    print(f"device={device} params={sum(p.numel() for p in net.parameters()) / 1e6:.1f}M")
-    window, t0, it = [], time.time(), start
+    log_file = open(out.with_suffix(".log"), "a")
+
+    def log(msg):
+        print(msg, flush=True)
+        log_file.write(msg + "\n")
+        log_file.flush()
+
+    log(f"--- {time.strftime('%Y-%m-%d %H:%M')}  {' '.join(f'{k}={v}' for k, v in vars(args).items())}")
+    log(f"device={device} params={sum(p.numel() for p in net.parameters()) / 1e6:.1f}M")
+    end_iter = start + args.iters if args.iters is not None else None
+    deadline = time.time() + args.hours * 3600 if args.hours is not None else None
+    window, t0, it, stop_reason = [], time.time(), start, "iteration limit"
     try:
-        for it in range(start + 1, start + args.iters + 1):
+        while end_iter is None or it < end_iter:
+            if deadline is not None and time.time() > deadline:
+                stop_reason = "time limit"
+                break
+            it += 1
             depths = torch.randint(1, args.max_depth + 1, (args.batch,), device=device)
             states, _ = cube.scramble(depths)
             targets = davi_targets(cube, target_net, states)
@@ -102,18 +135,19 @@ def main():
                 if updated:
                     target_net.load_state_dict(net.state_dict())
                     n_updates += 1
-                print(
+                log(
                     f"it {it:>7}  loss {mean_loss:.4f}  lr {sched.get_last_lr()[0]:.2e}  "
                     f"target updates {n_updates}{' (updated)' if updated else ''}  "
                     f"{(time.time() - t0) / args.check_every * 1000:.0f} ms/it"
                 )
-                print(f"           cost by depth  {depth_report(cube, net)}", flush=True)
+                log(f"           cost by depth  {depth_report(cube, net)}")
                 save(it)
                 t0 = time.time()
     except KeyboardInterrupt:
-        print("interrupted")
+        stop_reason = "Ctrl+C"
     save(it)
-    print(f"saved {out}")
+    log(f"stopped ({stop_reason}) at iteration {it}, {n_updates} target updates; saved {out}")
+    log_file.close()
 
 
 if __name__ == "__main__":

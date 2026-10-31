@@ -32,8 +32,12 @@ python -m venv .venv
 .venv\Scripts\python -m deepcube.solve --bench 50 --depth 30
 ```
 
-Ctrl+C during training saves a checkpoint, and `--resume checkpoints/deepcube.pt`
-continues it. Every `--check-every` iterations it prints the mean predicted cost
+Use `--hours 2` to cap training by time instead of (or as well as) `--iters`.
+The checkpoint (`checkpoints/deepcube.pt`) is saved every `--check-every`
+iterations and whenever training stops, including Ctrl+C, and the progress
+printout is appended to `checkpoints/deepcube.log`. `--resume checkpoints/deepcube.pt`
+continues exactly where it stopped (same target network, learning rate and
+optimizer state). Every `--check-every` iterations it prints the mean predicted cost
 for scrambles of each depth. That should climb with depth and level off around
 18-20, since no position is more than 20 moves from solved.
 
