@@ -7,7 +7,9 @@ close all
 trials = 1000;
 nummoves = zeros(trials,1);
 nummovesReduced = zeros(trials,1);
-plotLogic = 0;
+
+numshuffle = 30;
+plotLogic = 1;
 
 addpath('Algorithms')
 addpath('GetInfo')
@@ -34,7 +36,7 @@ end
 %% mix up
 cube = cubeSolved;
 pausetime = 0.01;
-[cube,algo] = shuffle(cube,trialnum);
+[cube,algo] = shuffle(cube,trialnum,numshuffle);
 
 if plotLogic == 1
     plotcube(cube);
@@ -100,7 +102,7 @@ end
     
 %% test reduceAlgo
 cube = newCube();
-[cube,~] = shuffle(cube,trialnum);
+[cube,~] = shuffle(cube,trialnum,numshuffle);
 algo_red = reduceAlgo(total_algo);
 cube_red = doAlgorithm(cube,algo_red);
 if isequal(cubeSolved,cube_red)
@@ -112,7 +114,7 @@ end
 
 %% animation?? 
 
-animateSolution(algo_red, trialnum)
+animateSolution(total_algo, cube)
 
 
 % to do: make it so that each stage has input so that it knows which side

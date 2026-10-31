@@ -1,0 +1,39 @@
+# MATLAB autosave / backup files
+*.asv
+*.m~
+*.autosave
+
+# MATLAB build output
+codegen/
+slprj/
+*.mex*
+
+# Large generated data: training sets, trained networks, videos
+training_data*.mat
+net_*.mat
+*.avi
+*.mp4
+
+# Reference papers
+*.pdf
+
+# Python (DeepCube / Kociemba work)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+*.pt
+*.pth
+checkpoints/
+runs/
+
+# Kociemba pruning/move tables (regenerated on first run)
+tables/
+
+# OS / Dropbox
+desktop.ini
+Thumbs.db
+.DS_Store
+.dropbox
+.dropbox.attr

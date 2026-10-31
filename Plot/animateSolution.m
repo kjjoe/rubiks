@@ -3,17 +3,18 @@
 % This function animates moves an algorithm on a shuffled cube with a given
 % seed. It is possible to save 
 % input:
-%    - total_algo: algorithm to animate
-%    - seed:       corresponding rng seed to shuffle the cube
-%    - makevideo:  (optional, default = 0) Make a video (1) or not (0)
-%    - namevideo:  (optional, default = 'rubiks(randint).avi' ) name of the
-%                  video to save
+%    - total_algo:  algorithm to animate
+%    - cubeToSolve: State of Cube.
+%    - makevideo:   (optional, default = 0) Make a video (1) or not (0)
+%    - namevideo:   (optional, default = 'rubiks(randint).avi' ) name of the
+%                   video to save
 %
-% output: 
+% output: Animation and saved video (optional)
 %
+% See also: shuffle.m
 
 
-function animateSolution(total_algo, seed, makevideo, namevideo)
+function animateSolution(total_algo, cubeToSolve, makevideo, namevideo)
 %% Properties
 
 incstep = 0.05;
@@ -36,8 +37,7 @@ end
 
 
 %% Plot initial state of the cube and shuffle
-cube = newCube();
-[cube,~] = shuffle(cube,seed);
+cube = cubeToSolve;
 [colors,faces] = getFaceColors(cube);
 piece = cell(27,6);
 num = 1;

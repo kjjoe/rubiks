@@ -12,8 +12,9 @@
 % See also: doAlgorithm.m for testing
 
 function algo_new = reduceAlgo(algo)
+    if ~isempty(algo)
     %% initialize
-   tog = char(algo);
+    tog = char(algo);
     tog(tog == ' ') = [];
     t = tog;
     moveset = 'DFRUBLMESXYZ';
@@ -140,6 +141,9 @@ function algo_new = reduceAlgo(algo)
 
         algo_new = join([algo_new, string(tmp)]);
     end
-
+    
+    else
+        algo_new = algo;
+    end
 
 end
